@@ -3,6 +3,7 @@
  * Provides high-level functions for playlist search and genre operations using @spotify/web-api-ts-sdk
  */
 
+import { genres as availableGenres } from '../../constants/spotify-genres'
 import type {
 	SearchCriteria,
 	SearchResult
@@ -28,55 +29,7 @@ export async function getAvailableGenres(): Promise<string[]> {
 		return genreCache
 	}
 
-	// Use curated list of genres that work with Spotify's search API
-	const availableGenres = [
-		'acoustic',
-		'afrobeat',
-		'alt-rock',
-		'alternative',
-		'ambient',
-		'ancient',
-		'blues',
-		'bossa-nova',
-		'brazil',
-		'breakbeat',
-		'british',
-		'chill',
-		'classical',
-		'club',
-		'country',
-		'dance',
-		'dancehall',
-		'deep-house',
-		'disco',
-		'drum-and-bass',
-		'dub',
-		'dubstep',
-		'electronic',
-		'folk',
-		'funk',
-		'garage',
-		'gospel',
-		'grunge',
-		'hip-hop',
-		'house',
-		'indie',
-		'jazz',
-		'latin',
-		'metal',
-		'new-age',
-		'pop',
-		'punk',
-		'r-n-b',
-		'reggae',
-		'rock',
-		'soul',
-		'techno',
-		'trance',
-		'world-music'
-	]
-
-	genreCache = availableGenres.sort()
+	genreCache = availableGenres.map(genre => genre.name).sort()
 	genreCacheExpiry = Date.now() + (60 * 60 * 1000) // Cache for 1 hour
 
 	console.log('Using curated genre list with', availableGenres.length, 'genres')

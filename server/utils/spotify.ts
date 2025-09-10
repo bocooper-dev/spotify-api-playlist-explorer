@@ -28,7 +28,7 @@ export function getSpotifyClient(): SpotifyApi {
 			console.log(`[Spotify SDK] Request: ${options.method || 'GET'} ${url}`)
 		},
 
-		afterRequest: (url: string, options: RequestInit, response: Response) => {
+		afterRequest: (url: string, _options: RequestInit, response: Response) => {
 			if (!response.ok) {
 				console.error(`[Spotify SDK] Error Response: ${response.status} ${response.statusText} for ${url}`)
 			} else {
@@ -70,7 +70,7 @@ export function getSpotifyClientWithErrorHandler(errorHandler: SpotifyErrorHandl
 			console.log(`[Spotify SDK] Request: ${options.method || 'GET'} ${url}`)
 		},
 
-		afterRequest: (url: string, options: RequestInit, response: Response) => {
+		afterRequest: (url: string, _options: RequestInit, response: Response) => {
 			if (!response.ok) {
 				console.error(`[Spotify SDK] Error Response: ${response.status} ${response.statusText} for ${url}`)
 			} else {
