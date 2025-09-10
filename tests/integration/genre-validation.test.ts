@@ -1,16 +1,13 @@
 import {
-  describe, expect, it
+	describe, expect, it
 } from 'vitest'
 
 describe('SDK Genre Integration', () => {
 	it('should fetch available genres from Spotify SDK', async () => {
-		// Test SDK genre fetching with adapter
-		const { getSpotifyClient } = await import('../../server/utils/spotify')
-		const { adaptSpotifyGenres } = await import('../../server/utils/spotifyAdapters')
+		// Test our getAvailableGenres function which handles the deprecated endpoint
+		const { getAvailableGenres } = await import('../../server/api/_spotify-api')
 
-		const client = getSpotifyClient()
-		const genreResponse = await client.browse.getAvailableGenreSeeds()
-		const genres = adaptSpotifyGenres(genreResponse)
+		const genres = await getAvailableGenres()
 
 		expect(genres).toBeTruthy()
 		expect(Array.isArray(genres)).toBe(true)

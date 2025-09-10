@@ -3,7 +3,7 @@
  */
 
 import type {
-  ErrorResponse, SearchResponse
+	ErrorResponse, SearchResponse
 } from '../../../types/search'
 import { validateSearchRequest } from '../../../types/search'
 import { searchPlaylistsByGenres } from '../_spotify-api'

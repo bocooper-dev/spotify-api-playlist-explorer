@@ -3,16 +3,12 @@
  * Provides high-level functions for playlist search and genre operations using @spotify/web-api-ts-sdk
  */
 
-import type { Playlist } from '../../types/playlist'
 import type {
-  SearchCriteria, SearchResult
+	SearchCriteria,
+	SearchResult
 } from '../../types/search'
 import { getSpotifyClient } from '../utils/spotify'
-import {
-  adaptSpotifyGenres,
-  adaptSpotifyPlaylists,
-  safeAdaptSpotifyPlaylist
-} from '../utils/spotifyAdapters'
+import { adaptSpotifyPlaylists } from '../utils/spotifyAdapters'
 import { createSpotifyErrorResponse } from '../utils/spotifyErrorHandler'
 
 // SDK handles caching internally, but we can add application-level caching if needed
@@ -20,8 +16,11 @@ let genreCache: string[] | null = null
 let genreCacheExpiry = 0
 
 /**
- * Get available music genres from Spotify using SDK
- * Uses caching to reduce API calls (genres don't change frequently)
+ * Get available music genres from Spotify
+ *
+ * NOTE: The official /recommendations/available-genre-seeds endpoint has been
+ * deprecated by Spotify, so we use a curated list of common genres that are
+ * known to work with Spotify's search and recommendation APIs.
  */
 export async function getAvailableGenres(): Promise<string[]> {
 	// Check cache validity (cache for 1 hour)
@@ -29,28 +28,60 @@ export async function getAvailableGenres(): Promise<string[]> {
 		return genreCache
 	}
 
-	try {
-		const client = getSpotifyClient()
-		const response = await client.recommendations.genreSeeds()
-		const genres = adaptSpotifyGenres(response)
+	// Use curated list of genres that work with Spotify's search API
+	const availableGenres = [
+		'acoustic',
+		'afrobeat',
+		'alt-rock',
+		'alternative',
+		'ambient',
+		'ancient',
+		'blues',
+		'bossa-nova',
+		'brazil',
+		'breakbeat',
+		'british',
+		'chill',
+		'classical',
+		'club',
+		'country',
+		'dance',
+		'dancehall',
+		'deep-house',
+		'disco',
+		'drum-and-bass',
+		'dub',
+		'dubstep',
+		'electronic',
+		'folk',
+		'funk',
+		'garage',
+		'gospel',
+		'grunge',
+		'hip-hop',
+		'house',
+		'indie',
+		'jazz',
+		'latin',
+		'metal',
+		'new-age',
+		'pop',
+		'punk',
+		'r-n-b',
+		'reggae',
+		'rock',
+		'soul',
+		'techno',
+		'trance',
+		'world-music'
+	]
 
-		genreCache = genres.sort()
-		genreCacheExpiry = Date.now() + (60 * 60 * 1000) // Cache for 1 hour
+	genreCache = availableGenres.sort()
+	genreCacheExpiry = Date.now() + (60 * 60 * 1000) // Cache for 1 hour
 
-		return genreCache
-	} catch (error) {
-		// If API fails but we have cached data, return it
-		if (genreCache) {
-			console.warn('Spotify API error, returning cached genres:', error)
-			return genreCache
-		}
-
-		const errorResponse = createSpotifyErrorResponse(error, 'Get available genres')
-		throw new Error(errorResponse.message)
-	}
-}
-
-/**
+	console.log('Using curated genre list with', availableGenres.length, 'genres')
+	return genreCache
+}/**
  * Validate genres against Spotify's available genre seeds
  */
 export async function validateGenres(genres: string[]): Promise<{
@@ -147,42 +178,6 @@ export async function searchPlaylistsByGenres(criteria: SearchCriteria): Promise
 	} catch (error) {
 		const errorResponse = createSpotifyErrorResponse(error, 'Playlist search')
 		throw new Error(errorResponse.message)
-	}
-}
-
-/**
- * Search playlists for a specific genre using SDK
- * Internal function for single genre searches if needed
- */
-async function searchPlaylistsByGenre(genre: string, limit: number = 50): Promise<{
-	playlists: Playlist[]
-	total: number
-}> {
-	try {
-		const client = getSpotifyClient()
-		const query = `genre:${genre}`
-
-		const searchResponse = await client.search(
-			query,
-			[ 'playlist' ],
-			'US',
-			Math.min(limit, 50) as any
-		)
-
-		// Adapt SDK results to internal format
-		const playlists = searchResponse.playlists.items
-			.map((sdkPlaylist: any) => safeAdaptSpotifyPlaylist(sdkPlaylist, [ genre ]))
-			.filter((playlist: any): playlist is Playlist => playlist !== null)
-
-		return {
-			playlists,
-			total: searchResponse.playlists.total
-		}
-	} catch (error) {
-		// Log error but don't fail completely for single genre
-		console.error(`Failed to search for genre "${genre}":`, error)
-		return { playlists: [],
-			total: 0 }
 	}
 }
 
