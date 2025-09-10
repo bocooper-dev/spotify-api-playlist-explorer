@@ -122,7 +122,7 @@
 </template>
 
 <script setup lang="ts">
-import type { SearchRequest } from '~/types/search'
+import type { SearchRequest } from '../../types/search'
 
 const emit = defineEmits<{
   search: [criteria: SearchRequest]

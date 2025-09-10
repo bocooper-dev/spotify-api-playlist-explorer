@@ -82,7 +82,7 @@
 </template>
 
 <script setup lang="ts">
-import type { SearchRequest, SearchResponse } from '~/types/search'
+import type { SearchRequest, SearchResponse } from '../../types/search'
 
 // Page metadata
 useHead({

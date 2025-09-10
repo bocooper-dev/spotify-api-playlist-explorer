@@ -15,7 +15,7 @@
 </template>
 
 <script setup lang="ts">
-import type { Playlist } from '~/types/playlist'
+import type { Playlist } from '../../types/playlist'
 
 interface Props {
   playlists: Playlist[]
@@ -98,7 +98,7 @@ function escapeCSVField(field: string): string {
 function generateFilename(): string {
   const now = new Date()
   const timestamp = now.toISOString().split('T')[0] // YYYY-MM-DD format
-  const timepart = now.toTimeString().split(' ')[0].replace(/:/g, '-') // HH-MM-SS format
+  const timepart = now.toTimeString().split(' ')[0]?.replace(/:/g, '-') || 'unknown-time' // HH-MM-SS format
   
   return `spotify-playlists-${timestamp}-${timepart}.csv`
 }
