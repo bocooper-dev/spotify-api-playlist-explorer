@@ -216,13 +216,13 @@
 import type { Playlist } from '../../types/playlist'
 
 interface Props {
-	playlists: Playlist[]
-	totalFound: number
+	playlists?: Playlist[]
+	totalFound?: number
 	timestamp?: string
 	isLoading?: boolean
 }
 
-const props = withDefaults(defineProps<Props>(), {
+withDefaults(defineProps<Props>(), {
 	playlists: () => [],
 	totalFound: 0,
 	isLoading: false

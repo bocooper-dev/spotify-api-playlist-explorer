@@ -11,8 +11,8 @@
  */
 
 import {
-	getSpotifyClient,
-	getSpotifyClientWithErrorHandler
+  getSpotifyClient,
+  getSpotifyClientWithErrorHandler
 } from '../utils/spotify'
 
 /**
@@ -42,8 +42,8 @@ export async function getSpotifyAccessToken(): Promise<string> {
  * SDK clients handle authentication automatically
  */
 export async function makeSpotifyRequest<T>(
-	url: string,
-	_options: RequestInit = {}
+	url: string
+	/* _options: RequestInit = {} */ // TODO: options can be used for future enhancements
 ): Promise<T> {
 	console.warn('[DEPRECATED] makeSpotifyRequest() is deprecated. Use getSpotifyClient() methods directly instead.')
 
@@ -87,6 +87,7 @@ export function getTokenCacheStatus(): { cached: boolean
 
 // Export SDK-based functions for new code
 export {
-	getSpotifyClient,
-	getSpotifyClientWithErrorHandler
+  getSpotifyClient,
+  getSpotifyClientWithErrorHandler
 }
+

@@ -18,7 +18,7 @@
 import type { Playlist } from '../../types/playlist'
 
 interface Props {
-	playlists: Playlist[]
+	playlists?: Playlist[]
 	searchCriteria?: {
 		genres: string[]
 		minFollowerCount: number
