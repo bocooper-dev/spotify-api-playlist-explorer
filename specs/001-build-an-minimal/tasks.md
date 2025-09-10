@@ -35,63 +35,63 @@
 - All paths relative to repository root
 
 ## Phase 3.1: Setup & Configuration
-- [ ] T001 Setup Spotify API credentials and environment variables in .env.example and .env.local
-- [ ] T002 Install missing dependencies: @nuxt/ui-pro packages for advanced components
-- [ ] T003 [P] Configure TypeScript types and Vitest test configuration in vitest.config.ts
+- [x] T001 Setup Spotify API credentials and environment variables in .env.example and .env.local
+- [x] T002 Install missing dependencies: @nuxt/ui-pro packages for advanced components
+- [x] T003 [P] Configure TypeScript types and Vitest test configuration in vitest.config.ts
 
 ## Phase 3.2: Tests First (TDD) ⚠️ MUST COMPLETE BEFORE 3.3
 **CRITICAL: These tests MUST be written and MUST FAIL before ANY implementation**
 
 ### API Contract Tests
-- [ ] T004 [P] Contract test POST /api/search/playlists in tests/api/search-playlists.test.ts
-- [ ] T005 [P] Contract test GET /api/genres in tests/api/genres.test.ts
+- [x] T004 [P] Contract test POST /api/search/playlists in tests/api/search-playlists.test.ts
+- [x] T005 [P] Contract test GET /api/genres in tests/api/genres.test.ts
 
 ### Integration Tests  
-- [ ] T006 [P] Integration test Spotify API authentication in tests/integration/spotify-auth.test.ts
-- [ ] T007 [P] Integration test playlist search flow in tests/integration/playlist-search.test.ts
-- [ ] T008 [P] Integration test genre validation in tests/integration/genre-validation.test.ts
+- [x] T006 [P] Integration test Spotify API authentication in tests/integration/spotify-auth.test.ts
+- [x] T007 [P] Integration test playlist search flow in tests/integration/playlist-search.test.ts
+- [x] T008 [P] Integration test genre validation in tests/integration/genre-validation.test.ts
 
 ### E2E Tests
-- [ ] T009 [P] E2E test complete search workflow in tests/e2e/search-workflow.spec.ts
-- [ ] T010 [P] E2E test CSV export functionality in tests/e2e/csv-export.spec.ts
+- [x] T009 [P] E2E test complete search workflow in tests/e2e/search-workflow.spec.ts
+- [x] T010 [P] E2E test CSV export functionality in tests/e2e/csv-export.spec.ts
 
 ## Phase 3.3: Core Implementation (ONLY after tests are failing)
 
 ### Type Definitions & Models
-- [ ] T011 [P] Playlist types in types/playlist.ts based on data-model.md entities
-- [ ] T012 [P] SearchCriteria types in types/search.ts for request/response schemas
-- [ ] T013 [P] Spotify API types in types/spotify.ts for external API responses
+- [x] T011 [P] Playlist types in types/playlist.ts based on data-model.md entities
+- [x] T012 [P] SearchCriteria types in types/search.ts for request/response schemas
+- [x] T013 [P] Spotify API types in types/spotify.ts for external API responses
 
 ### Spotify API Integration
-- [ ] T014 [P] Spotify client credentials service in server/api/_spotify-client.ts
-- [ ] T015 [P] Spotify API wrapper with error handling in server/api/_spotify-api.ts
+- [x] T014 [P] Spotify client credentials service in server/api/_spotify-client.ts
+- [x] T015 [P] Spotify API wrapper with error handling in server/api/_spotify-api.ts
 
 ### API Endpoints
-- [ ] T016 GET /api/genres endpoint in server/api/genres.get.ts (retrieve available genres)
-- [ ] T017 POST /api/search/playlists endpoint in server/api/search/playlists.post.ts (main search)
+- [x] T016 GET /api/genres endpoint in server/api/genres.get.ts (retrieve available genres)
+- [x] T017 POST /api/search/playlists endpoint in server/api/search/playlists.post.ts (main search)
 
 ### Frontend Components
-- [ ] T018 [P] SearchForm component in app/components/SearchForm.vue (genre multi-select + follower input)
-- [ ] T019 [P] PlaylistTable component in app/components/PlaylistTable.vue (results display)
-- [ ] T020 [P] CSVExport component in app/components/CSVExport.vue (download functionality)
+- [x] T018 [P] SearchForm component in app/components/SearchForm.vue (genre multi-select + follower input)
+- [x] T019 [P] PlaylistTable component in app/components/PlaylistTable.vue (results display)
+- [x] T020 [P] CSVExport component in app/components/CSVExport.vue (download functionality)
 
 ### Main Page
-- [ ] T021 Replace index.vue with playlist search interface in app/pages/index.vue
+- [x] T021 Replace index.vue with playlist search interface in app/pages/index.vue
 
 ## Phase 3.4: Integration & Polish
 
 ### Error Handling & Validation
-- [ ] T022 Input validation and error handling in SearchForm component
-- [ ] T023 API error handling with user-friendly messages across all endpoints
-- [ ] T024 Rate limiting and retry logic for Spotify API calls
+- [x] T022 Input validation and error handling in SearchForm component
+- [x] T023 API error handling with user-friendly messages across all endpoints
+- [x] T024 Rate limiting and retry logic for Spotify API calls
 
 ### Performance & UX
-- [ ] T025 Loading states and progress indicators in UI components
-- [ ] T026 Responsive design and mobile optimization using Tailwind
-- [ ] T027 CSV export implementation with proper filename and data formatting
+- [x] T025 Loading states and progress indicators in UI components
+- [x] T026 Responsive design and mobile optimization using Tailwind
+- [x] T027 CSV export implementation with proper filename and data formatting
 
 ### Final Integration
-- [ ] T028 End-to-end testing validation using quickstart.md scenarios
+- [x] T028 End-to-end testing validation using quickstart.md scenarios
 
 ## Dependencies
 - Setup (T001-T003) before all other phases
