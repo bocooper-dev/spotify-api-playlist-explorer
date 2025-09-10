@@ -10,7 +10,10 @@
  * - No manual token caching required - SDK includes built-in optimization
  */
 
-import { getSpotifyClient } from '../utils/spotify'
+import {
+	getSpotifyClient,
+	getSpotifyClientWithErrorHandler
+} from '../utils/spotify'
 
 /**
  * @deprecated Use getSpotifyClient() from ~/server/utils/spotify.ts instead
@@ -39,8 +42,8 @@ export async function getSpotifyAccessToken(): Promise<string> {
  * SDK clients handle authentication automatically
  */
 export async function makeSpotifyRequest<T>(
-	url: string,
-	options: RequestInit = {}
+	url: string
+	/* _options: RequestInit = {} */ // TODO: options can be used for future enhancements
 ): Promise<T> {
 	console.warn('[DEPRECATED] makeSpotifyRequest() is deprecated. Use getSpotifyClient() methods directly instead.')
 
@@ -84,9 +87,6 @@ export function getTokenCacheStatus(): { cached: boolean
 
 // Export SDK-based functions for new code
 export {
-	getSpotifyClient, getSpotifyClientWithErrorHandler
-} from '../utils/spotify'
-export {
-	defaultSpotifyErrorHandler
-} from '../utils/spotifyErrorHandler'
-
+	getSpotifyClient,
+	getSpotifyClientWithErrorHandler
+}
