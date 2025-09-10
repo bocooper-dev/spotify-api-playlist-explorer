@@ -1,0 +1,269 @@
+openapi: 3.0.3
+info:
+  title: Spotify Playlist Explorer API
+  description: API for discovering popular Spotify playlists by genre and follower count
+  version: 1.0.0
+  
+servers:
+  - url: http://localhost:3000/api
+    description: Development server
+
+paths:
+  /search/playlists:
+    post:
+      summary: Search for playlists by criteria
+      description: Find playlists matching genre and minimum follower requirements
+      operationId: searchPlaylists
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchRequest'
+      responses:
+        '200':
+          description: Successful search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+        '400':
+          description: Invalid search parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+                
+  /genres:
+    get:
+      summary: Get available music genres
+      description: Retrieve list of valid genres for playlist search
+      operationId: getAvailableGenres
+      responses:
+        '200':
+          description: List of available genres
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenresResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    SearchRequest:
+      type: object
+      required:
+        - genres
+        - minFollowerCount
+      properties:
+        genres:
+          type: array
+          items:
+            type: string
+          minItems: 1
+          maxItems: 10
+          description: Music genres to search for
+          example: ["rock", "jazz", "electronic"]
+        minFollowerCount:
+          type: integer
+          minimum: 0
+          description: Minimum number of followers required
+          example: 1000
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 50
+          default: 50
+          description: Maximum number of playlists to return
+          
+    SearchResponse:
+      type: object
+      required:
+        - playlists
+        - totalFound
+        - searchCriteria
+        - timestamp
+      properties:
+        playlists:
+          type: array
+          items:
+            $ref: '#/components/schemas/Playlist'
+          description: Found playlists matching criteria
+        totalFound:
+          type: integer
+          minimum: 0
+          description: Total number of playlists found
+          example: 42
+        searchCriteria:
+          $ref: '#/components/schemas/SearchCriteria'
+        timestamp:
+          type: string
+          format: date-time
+          description: When the search was performed
+          
+    Playlist:
+      type: object
+      required:
+        - id
+        - name
+        - url
+        - followerCount
+        - trackCount
+        - owner
+        - genres
+        - isPublic
+      properties:
+        id:
+          type: string
+          description: Spotify playlist ID
+          example: "37i9dQZF1DX0XUsuxWHRQd"
+        name:
+          type: string
+          maxLength: 255
+          description: Playlist display name
+          example: "RapCaviar"
+        description:
+          type: string
+          nullable: true
+          description: Playlist description
+          example: "New music from Lil Baby, 21 Savage, Migos and more"
+        url:
+          type: string
+          format: uri
+          description: Spotify web URL
+          example: "https://open.spotify.com/playlist/37i9dQZF1DX0XUsuxWHRQd"
+        followerCount:
+          type: integer
+          minimum: 0
+          description: Number of followers
+          example: 4500000
+        trackCount:
+          type: integer
+          minimum: 0
+          description: Number of tracks
+          example: 50
+        imageUrl:
+          type: string
+          format: uri
+          nullable: true
+          description: Cover image URL
+          example: "https://i.scdn.co/image/ab67706f00000002ca5a7517156021292e5663a6"
+        owner:
+          $ref: '#/components/schemas/PlaylistOwner'
+        genres:
+          type: array
+          items:
+            type: string
+          description: Associated music genres
+          example: ["hip hop", "rap"]
+        isPublic:
+          type: boolean
+          description: Whether playlist is publicly accessible
+          example: true
+          
+    PlaylistOwner:
+      type: object
+      required:
+        - id
+        - username
+        - displayName
+        - profileUrl
+      properties:
+        id:
+          type: string
+          description: Spotify user ID
+          example: "spotify"
+        username:
+          type: string
+          description: Spotify username
+          example: "spotify"
+        displayName:
+          type: string
+          maxLength: 255
+          description: User display name
+          example: "Spotify"
+        profileUrl:
+          type: string
+          format: uri
+          description: Spotify profile URL
+          example: "https://open.spotify.com/user/spotify"
+        imageUrl:
+          type: string
+          format: uri
+          nullable: true
+          description: Profile picture URL
+          example: "https://i.scdn.co/image/ab6775700000ee85a00b11c129b27a88fc72f36b"
+          
+    SearchCriteria:
+      type: object
+      required:
+        - genres
+        - minFollowerCount
+        - limit
+      properties:
+        genres:
+          type: array
+          items:
+            type: string
+          description: Selected music genres
+          example: ["rock", "jazz"]
+        minFollowerCount:
+          type: integer
+          minimum: 0
+          description: Minimum follower threshold
+          example: 1000
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 50
+          description: Maximum results to return
+          example: 50
+          
+    GenresResponse:
+      type: object
+      required:
+        - genres
+      properties:
+        genres:
+          type: array
+          items:
+            type: string
+          description: Available music genres for search
+          example: ["acoustic", "afrobeat", "alt-rock", "alternative", "ambient"]
+          
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Error type
+          example: "VALIDATION_ERROR"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Invalid genre provided"
+        details:
+          type: object
+          nullable: true
+          description: Additional error context
+          example: { "invalidGenres": ["invalid-genre"] }
