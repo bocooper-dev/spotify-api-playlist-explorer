@@ -117,7 +117,7 @@ export default defineEventHandler(async (event): Promise<SearchResponse | ErrorR
     return {
       error: 'SEARCH_ERROR',
       message: 'Unable to search playlists. Please try again later.',
-      details: process.env.NODE_ENV === 'development' ? error instanceof Error ? error.message : String(error) : undefined
+      details: import.meta.env.NODE_ENV === 'development' ? error instanceof Error ? error.message : String(error) : undefined
     }
   }
 })

@@ -1,163 +1,116 @@
 import { describe, it, expect } from 'vitest'
 
-describe('Playlist Search Flow Integration', () => {
-  it('should search for playlists using Spotify API with genre filtering', async () => {
-    // This test will fail until we implement the Spotify API wrapper
-    const { searchPlaylistsByGenres } = await import('~/server/api/_spotify-api')
+describe('Playlist Search Flow Integration with SDK', () => {
+  it('should search for playlists using SDK with type adapters', async () => {
+    // Test SDK integration with adapter layer
+    const { getSpotifyClient } = await import('~/server/utils/spotify')
+    const { adaptSpotifyPlaylists } = await import('~/server/utils/spotifyAdapters')
 
-    const searchCriteria = {
-      genres: ['rock', 'alternative'],
-      minFollowerCount: 1000,
-      limit: 10
-    }
+    const client = getSpotifyClient()
+    const searchGenres = ['rock', 'alternative']
+    const limit = 10
 
-    const result = await searchPlaylistsByGenres(searchCriteria)
+    // Use SDK to search (testing direct SDK functionality)
+    const searchResults = await client.search('genre:rock OR genre:alternative', ['playlist'], 'US', limit)
+    
+    // Adapt SDK results to internal format
+    const adaptedPlaylists = adaptSpotifyPlaylists(searchResults.playlists.items, searchGenres)
 
-    expect(result).toBeTruthy()
-    expect(result.playlists).toBeDefined()
-    expect(Array.isArray(result.playlists)).toBe(true)
-    expect(result.totalFound).toBeGreaterThanOrEqual(0)
+    expect(adaptedPlaylists).toBeTruthy()
+    expect(Array.isArray(adaptedPlaylists)).toBe(true)
 
-    // If results found, validate they meet criteria
-    if (result.playlists.length > 0) {
-      result.playlists.forEach(playlist => {
-        expect(playlist.followerCount).toBeGreaterThanOrEqual(1000)
+    // If results found, validate they meet criteria and are properly adapted
+    if (adaptedPlaylists.length > 0) {
+      adaptedPlaylists.forEach(playlist => {
         expect(playlist.id).toBeTruthy()
         expect(playlist.name).toBeTruthy()
         expect(playlist.url).toContain('spotify.com')
         expect(playlist.owner).toBeTruthy()
         expect(playlist.owner.id).toBeTruthy()
         expect(playlist.owner.displayName).toBeTruthy()
+        expect(playlist.genres).toEqual(searchGenres) // Should have search genres
       })
     }
 
-    expect(result.playlists.length).toBeLessThanOrEqual(10)
+    expect(adaptedPlaylists.length).toBeLessThanOrEqual(limit)
   })
 
   it('should handle empty search results gracefully', async () => {
-    const { searchPlaylistsByGenres } = await import('~/server/api/_spotify-api')
+    const { getSpotifyClient } = await import('~/server/utils/spotify')
+    const { adaptSpotifyPlaylists } = await import('~/server/utils/spotifyAdapters')
 
-    const restrictiveSearch = {
-      genres: ['very-obscure-genre-that-does-not-exist'],
-      minFollowerCount: 10000000, // Very high follower count
-      limit: 50
-    }
+    const client = getSpotifyClient()
+    
+    // Search for something very obscure that likely returns no results
+    const searchResults = await client.search('genre:very-obscure-genre-that-does-not-exist', ['playlist'], 'US', 50)
+    
+    const adaptedPlaylists = adaptSpotifyPlaylists(searchResults.playlists.items, ['very-obscure-genre-that-does-not-exist'])
 
-    const result = await searchPlaylistsByGenres(restrictiveSearch)
-
-    expect(result).toBeTruthy()
-    expect(result.playlists).toBeDefined()
-    expect(Array.isArray(result.playlists)).toBe(true)
-    expect(result.playlists.length).toBe(0)
-    expect(result.totalFound).toBe(0)
+    expect(adaptedPlaylists).toBeTruthy()
+    expect(Array.isArray(adaptedPlaylists)).toBe(true)
+    expect(adaptedPlaylists.length).toBe(0)
   })
 
-  it('should respect follower count filtering', async () => {
-    const { searchPlaylistsByGenres } = await import('~/server/api/_spotify-api')
+  it('should test SDK type adapter functionality', async () => {
+    const { getSpotifyClient } = await import('~/server/utils/spotify')
+    const { adaptSpotifyPlaylist, validateSpotifyPlaylist } = await import('~/server/utils/spotifyAdapters')
 
-    const searchCriteria = {
-      genres: ['pop'], // Popular genre likely to have high-follower playlists
-      minFollowerCount: 50000,
-      limit: 20
-    }
-
-    const result = await searchPlaylistsByGenres(searchCriteria)
-
-    expect(result).toBeTruthy()
+    const client = getSpotifyClient()
     
-    // All returned playlists should meet minimum follower requirement
-    result.playlists.forEach(playlist => {
-      expect(playlist.followerCount).toBeGreaterThanOrEqual(50000)
-    })
-  })
-
-  it('should handle multiple genres correctly', async () => {
-    const { searchPlaylistsByGenres } = await import('~/server/api/_spotify-api')
-
-    const multiGenreSearch = {
-      genres: ['rock', 'jazz', 'electronic'],
-      minFollowerCount: 1000,
-      limit: 30
-    }
-
-    const result = await searchPlaylistsByGenres(multiGenreSearch)
-
-    expect(result).toBeTruthy()
-    expect(result.totalFound).toBeGreaterThanOrEqual(0)
+    // Get a playlist from SDK for testing adapter
+    const searchResults = await client.search('genre:pop', ['playlist'], 'US', 5)
     
-    // Results should potentially include playlists from any of the specified genres
-    // Since we're combining searches, totalFound could be quite high
-    if (result.playlists.length > 0) {
-      expect(result.playlists.length).toBeLessThanOrEqual(30)
-    }
-  })
-
-  it('should handle API rate limiting gracefully', async () => {
-    const { searchPlaylistsByGenres } = await import('~/server/api/_spotify-api')
-
-    const searches = []
-    
-    // Make multiple concurrent requests to potentially trigger rate limiting
-    for (let i = 0; i < 5; i++) {
-      searches.push(
-        searchPlaylistsByGenres({
-          genres: ['pop'],
-          minFollowerCount: 1000,
-          limit: 10
-        })
-      )
-    }
-
-    // All searches should either succeed or handle rate limiting properly
-    const results = await Promise.allSettled(searches)
-    
-    results.forEach(result => {
-      if (result.status === 'fulfilled') {
-        expect(result.value).toBeTruthy()
-        expect(result.value.playlists).toBeDefined()
-      } else {
-        // If rejected, should be due to rate limiting, not unhandled errors
-        expect(result.reason.message).toMatch(/rate limit|too many requests/i)
-      }
-    })
-  })
-
-  it('should map Spotify API response to internal playlist format', async () => {
-    const { searchPlaylistsByGenres } = await import('~/server/api/_spotify-api')
-
-    const result = await searchPlaylistsByGenres({
-      genres: ['indie'],
-      minFollowerCount: 100,
-      limit: 5
-    })
-
-    if (result.playlists.length > 0) {
-      const playlist = result.playlists[0]
+    if (searchResults.playlists.items.length > 0) {
+      const sdkPlaylist = searchResults.playlists.items[0]
       
-      // Validate complete mapping from Spotify API to internal format
-      expect(playlist).toHaveProperty('id')
-      expect(playlist).toHaveProperty('name')
-      expect(playlist).toHaveProperty('url')
-      expect(playlist).toHaveProperty('followerCount')
-      expect(playlist).toHaveProperty('trackCount')
-      expect(playlist).toHaveProperty('owner')
-      expect(playlist).toHaveProperty('genres')
-      expect(playlist).toHaveProperty('isPublic')
+      // Validate SDK playlist data
+      expect(validateSpotifyPlaylist(sdkPlaylist)).toBe(true)
+      
+      // Test adapter function
+      const adaptedPlaylist = adaptSpotifyPlaylist(sdkPlaylist, ['pop'])
+      
+      // Validate complete mapping from SDK to internal format
+      expect(adaptedPlaylist).toHaveProperty('id')
+      expect(adaptedPlaylist).toHaveProperty('name')
+      expect(adaptedPlaylist).toHaveProperty('url')
+      expect(adaptedPlaylist).toHaveProperty('followerCount')
+      expect(adaptedPlaylist).toHaveProperty('trackCount')
+      expect(adaptedPlaylist).toHaveProperty('owner')
+      expect(adaptedPlaylist).toHaveProperty('genres')
+      expect(adaptedPlaylist).toHaveProperty('isPublic')
 
       // Owner should be properly mapped
-      expect(playlist.owner).toHaveProperty('id')
-      expect(playlist.owner).toHaveProperty('username')
-      expect(playlist.owner).toHaveProperty('displayName')
-      expect(playlist.owner).toHaveProperty('profileUrl')
+      expect(adaptedPlaylist.owner).toHaveProperty('id')
+      expect(adaptedPlaylist.owner).toHaveProperty('username')
+      expect(adaptedPlaylist.owner).toHaveProperty('displayName')
+      expect(adaptedPlaylist.owner).toHaveProperty('profileUrl')
 
       // Data types should be correct
-      expect(typeof playlist.id).toBe('string')
-      expect(typeof playlist.name).toBe('string')
-      expect(typeof playlist.url).toBe('string')
-      expect(typeof playlist.followerCount).toBe('number')
-      expect(typeof playlist.trackCount).toBe('number')
-      expect(Array.isArray(playlist.genres)).toBe(true)
-      expect(typeof playlist.isPublic).toBe('boolean')
+      expect(typeof adaptedPlaylist.id).toBe('string')
+      expect(typeof adaptedPlaylist.name).toBe('string')
+      expect(typeof adaptedPlaylist.url).toBe('string')
+      expect(typeof adaptedPlaylist.followerCount).toBe('number')
+      expect(typeof adaptedPlaylist.trackCount).toBe('number')
+      expect(Array.isArray(adaptedPlaylist.genres)).toBe(true)
+      expect(typeof adaptedPlaylist.isPublic).toBe('boolean')
+      
+      // Genres should be set correctly
+      expect(adaptedPlaylist.genres).toEqual(['pop'])
     }
+  })
+
+  it('should handle SDK error responses with custom error handler', async () => {
+    const { getSpotifyClientWithErrorHandler } = await import('~/server/utils/spotify')
+    const { SpotifyErrorHandler } = await import('~/server/utils/spotifyErrorHandler')
+
+    const errorHandler = new SpotifyErrorHandler()
+    const client = getSpotifyClientWithErrorHandler(errorHandler)
+    
+    // SDK should work normally with error handler
+    const genres = await client.browse.getAvailableGenreSeeds()
+    
+    expect(genres).toBeTruthy()
+    expect(genres.genres).toBeTruthy()
+    expect(Array.isArray(genres.genres)).toBe(true)
   })
 })

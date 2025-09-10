@@ -1,33 +1,24 @@
 /**
- * Spotify Web API wrapper with error handling and business logic
- * Provides high-level functions for playlist search and genre operations
+ * Spotify Web API SDK-based wrapper with error handling and business logic
+ * Provides high-level functions for playlist search and genre operations using @spotify/web-api-ts-sdk
  */
 
-import type { Playlist, PlaylistOwner } from '../../types/playlist'
+import type { Playlist } from '../../types/playlist'
 import type { SearchCriteria, SearchResult } from '../../types/search'
-import type {
-  RateLimitConfig,
-  SpotifyGenreSeedsResponse,
-  SpotifyPlaylist,
-  SpotifySearchResponse,
-  SpotifyUser
-} from '../../types/spotify'
-import { makeSpotifyRequest } from './_spotify-client'
+import { getSpotifyClient } from '../utils/spotify'
+import { 
+  adaptSpotifyGenres, 
+  adaptSpotifyPlaylists, 
+  safeAdaptSpotifyPlaylist 
+} from '../utils/spotifyAdapters'
+import { createSpotifyErrorResponse } from '../utils/spotifyErrorHandler'
 
-// Genre cache to reduce API calls
+// SDK handles caching internally, but we can add application-level caching if needed
 let genreCache: string[] | null = null
 let genreCacheExpiry = 0
 
-// Rate limiting configuration
-const rateLimitConfig: RateLimitConfig = {
-  maxRetries: 3,
-  baseDelay: 1000,
-  maxDelay: 10000,
-  backoffMultiplier: 2
-}
-
 /**
- * Get available music genres from Spotify
+ * Get available music genres from Spotify using SDK
  * Uses caching to reduce API calls (genres don't change frequently)
  */
 export async function getAvailableGenres(): Promise<string[]> {
@@ -37,21 +28,23 @@ export async function getAvailableGenres(): Promise<string[]> {
   }
 
   try {
-    const response = await makeSpotifyRequest<SpotifyGenreSeedsResponse>(
-      'https://api.spotify.com/v1/recommendations/available-genre-seeds'
-    )
+    const client = getSpotifyClient()
+    const response = await client.recommendations.genreSeeds()
+    const genres = adaptSpotifyGenres(response)
 
-    genreCache = response.genres.sort()
+    genreCache = genres.sort()
     genreCacheExpiry = Date.now() + (60 * 60 * 1000) // Cache for 1 hour
 
     return genreCache
   } catch (error) {
     // If API fails but we have cached data, return it
     if (genreCache) {
+      console.warn('Spotify API error, returning cached genres:', error)
       return genreCache
     }
 
-    throw new Error(`Failed to fetch available genres: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    const errorResponse = createSpotifyErrorResponse(error, 'Get available genres')
+    throw new Error(errorResponse.message)
   }
 }
 
@@ -105,12 +98,10 @@ export async function validateGenres(genres: string[]): Promise<{
 }
 
 /**
- * Search for playlists by genres with follower count filtering
+ * Search for playlists by genres with follower count filtering using SDK
  * Combines multiple genre searches and filters by minimum follower count
  */
 export async function searchPlaylistsByGenres(criteria: SearchCriteria): Promise<SearchResult> {
-  const startTime = Date.now()
-
   try {
     // Validate genres first
     const genreValidation = await validateGenres(criteria.genres)
@@ -118,65 +109,72 @@ export async function searchPlaylistsByGenres(criteria: SearchCriteria): Promise
       throw new Error(`Invalid genres: ${genreValidation.invalidGenres.join(', ')}`)
     }
 
-    // Build search queries for each genre
-    const searchPromises = genreValidation.validGenres.map(genre =>
-      searchPlaylistsByGenre(genre, Math.ceil(criteria.limit / genreValidation.validGenres.length))
+    const client = getSpotifyClient()
+    
+    // Build search query combining all genres
+    const genreQuery = genreValidation.validGenres
+      .map(genre => `genre:${genre}`)
+      .join(' OR ')
+    
+    // Use SDK search with combined genre query
+    const searchResponse = await client.search(
+      genreQuery,
+      ['playlist'],
+      'US', // Market - can be made configurable later
+      Math.min(criteria.limit, 50) as any // SDK limit is 50, cast to satisfy type
     )
 
-    // Execute searches concurrently
-    const searchResults = await Promise.all(searchPromises)
+    // Adapt SDK results to internal format
+    const adaptedPlaylists = adaptSpotifyPlaylists(
+      searchResponse.playlists.items,
+      genreValidation.validGenres
+    )
 
-    // Combine and deduplicate results
-    const allPlaylists = new Map<string, Playlist>()
-    let totalFound = 0
-
-    for (const result of searchResults) {
-      totalFound += result.total
-      result.playlists.forEach(playlist => {
-        if (playlist.followerCount >= criteria.minFollowerCount) {
-          allPlaylists.set(playlist.id, playlist)
-        }
-      })
-    }
-
-    // Sort by follower count (descending) and limit results
-    const sortedPlaylists = Array.from(allPlaylists.values())
+    // Filter by follower count and sort
+    const filteredPlaylists = adaptedPlaylists
+      .filter(playlist => playlist.followerCount >= criteria.minFollowerCount)
       .sort((a, b) => b.followerCount - a.followerCount)
       .slice(0, criteria.limit)
 
     return {
-      playlists: sortedPlaylists,
-      totalFound: sortedPlaylists.length,
+      playlists: filteredPlaylists,
+      totalFound: filteredPlaylists.length,
       searchCriteria: criteria,
       timestamp: new Date()
     }
   } catch (error) {
-    throw new Error(`Playlist search failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    const errorResponse = createSpotifyErrorResponse(error, 'Playlist search')
+    throw new Error(errorResponse.message)
   }
 }
 
 /**
- * Search playlists for a specific genre
- * Internal function used by searchPlaylistsByGenres
+ * Search playlists for a specific genre using SDK
+ * Internal function for single genre searches if needed
  */
 async function searchPlaylistsByGenre(genre: string, limit: number = 50): Promise<{
   playlists: Playlist[]
   total: number
 }> {
-  const query = `genre:"${genre}"`
-
   try {
-    const response = await makeSpotifyRequest<SpotifySearchResponse>(
-      `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=playlist&limit=${Math.min(limit, 50)}`
+    const client = getSpotifyClient()
+    const query = `genre:${genre}`
+
+    const searchResponse = await client.search(
+      query,
+      ['playlist'],
+      'US',
+      Math.min(limit, 50) as any
     )
 
-    const playlists = response.playlists.items
-      .filter(playlist => playlist.owner && playlist.tracks) // Filter out incomplete data
-      .map(mapSpotifyPlaylistToInternal)
+    // Adapt SDK results to internal format
+    const playlists = searchResponse.playlists.items
+      .map(sdkPlaylist => safeAdaptSpotifyPlaylist(sdkPlaylist, [genre]))
+      .filter((playlist): playlist is Playlist => playlist !== null)
 
     return {
       playlists,
-      total: response.playlists.total
+      total: searchResponse.playlists.total
     }
   } catch (error) {
     // Log error but don't fail completely for single genre
@@ -186,38 +184,8 @@ async function searchPlaylistsByGenre(genre: string, limit: number = 50): Promis
 }
 
 /**
- * Map Spotify API playlist object to internal Playlist type
- */
-function mapSpotifyPlaylistToInternal(spotifyPlaylist: SpotifyPlaylist): Playlist {
-  return {
-    id: spotifyPlaylist.id,
-    name: spotifyPlaylist.name,
-    description: spotifyPlaylist.description || undefined,
-    url: spotifyPlaylist.external_urls.spotify,
-    followerCount: spotifyPlaylist.followers.total,
-    trackCount: spotifyPlaylist.tracks.total,
-    imageUrl: spotifyPlaylist.images[0]?.url,
-    owner: mapSpotifyUserToOwner(spotifyPlaylist.owner),
-    genres: [], // Will be inferred from search context
-    isPublic: spotifyPlaylist.public ?? true
-  }
-}
-
-/**
- * Map Spotify API user object to internal PlaylistOwner type
- */
-function mapSpotifyUserToOwner(spotifyUser: SpotifyUser): PlaylistOwner {
-  return {
-    id: spotifyUser.id,
-    username: spotifyUser.id, // Spotify uses ID as username
-    displayName: spotifyUser.display_name || spotifyUser.id,
-    profileUrl: spotifyUser.external_urls.spotify,
-    imageUrl: spotifyUser.images[0]?.url
-  }
-}
-
-/**
  * Clear genre cache (useful for testing)
+ * Note: SDK has its own internal caching which we cannot directly control
  */
 export function clearGenreCache(): void {
   genreCache = null
@@ -226,6 +194,7 @@ export function clearGenreCache(): void {
 
 /**
  * Get cache status for debugging
+ * Note: This only shows application-level cache status, not SDK internal cache
  */
 export function getCacheStatus(): {
   genresCached: boolean
