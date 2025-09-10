@@ -28,6 +28,7 @@
 					data-testid="genre-select"
 					:loading="genresLoading"
 					:disabled="genresLoading"
+					:ui="{ content: 'max-h-90' }"
 					class="w-full"
 				>
 					<template #label>

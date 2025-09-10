@@ -13,7 +13,8 @@
     "typecheck": "nuxt typecheck",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "ssl:install": "mkcert -install && mkcert localhost 127.0.0.1 ::1"
   },
   "dependencies": {
     "@iconify-json/lucide": "^1.2.66",
