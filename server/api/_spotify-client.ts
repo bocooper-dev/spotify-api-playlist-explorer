@@ -11,8 +11,8 @@
  */
 
 import {
-  getSpotifyClient,
-  getSpotifyClientWithErrorHandler
+	getSpotifyClient,
+	getSpotifyClientWithErrorHandler
 } from '../utils/spotify'
 
 /**
@@ -87,7 +87,6 @@ export function getTokenCacheStatus(): { cached: boolean
 
 // Export SDK-based functions for new code
 export {
-  getSpotifyClient,
-  getSpotifyClientWithErrorHandler
+	getSpotifyClient,
+	getSpotifyClientWithErrorHandler
 }
-
