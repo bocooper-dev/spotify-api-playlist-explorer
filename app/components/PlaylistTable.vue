@@ -160,7 +160,7 @@
 </template>
 
 <script setup lang="ts">
-import type { Playlist } from '~/types/playlist'
+import type { Playlist } from '../../types/playlist'
 
 interface Props {
   playlists: Playlist[]

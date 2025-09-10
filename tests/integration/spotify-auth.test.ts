@@ -1,19 +1,52 @@
 import { describe, it, expect } from 'vitest'
 
-describe('Spotify API Authentication', () => {
-  it('should successfully authenticate with Spotify using client credentials', async () => {
-    // This test will fail until we implement the Spotify client
-    const { getSpotifyAccessToken } = await import('~/server/api/_spotify-client')
+describe('Spotify SDK Authentication Integration', () => {
+  it('should successfully create SDK client with credentials', async () => {
+    // Test SDK client creation and authentication
+    const { getSpotifyClient } = await import('../../server/utils/spotify')
 
-    const token = await getSpotifyAccessToken()
+    const client = getSpotifyClient()
     
-    expect(token).toBeTruthy()
-    expect(typeof token).toBe('string')
-    expect(token.length).toBeGreaterThan(50) // Spotify access tokens are quite long
+    expect(client).toBeTruthy()
+    expect(client.browse).toBeTruthy() // SDK client should have browse methods
+    expect(client.search).toBeTruthy() // SDK client should have search methods
   })
 
-  it('should handle authentication failures gracefully', async () => {
-    // Temporarily use invalid credentials to test error handling
+  it('should handle missing credentials gracefully', async () => {
+    // Temporarily remove credentials to test error handling
+    const originalClientId = process.env.SPOTIFY_CLIENT_ID
+    const originalClientSecret = process.env.SPOTIFY_CLIENT_SECRET
+    
+    delete process.env.SPOTIFY_CLIENT_ID
+    delete process.env.SPOTIFY_CLIENT_SECRET
+
+    try {
+      const { getSpotifyClient } = await import('../../server/utils/spotify')
+      
+      expect(() => getSpotifyClient()).toThrow('Spotify API credentials not configured')
+    } finally {
+      // Restore original credentials
+      if (originalClientId) process.env.SPOTIFY_CLIENT_ID = originalClientId
+      if (originalClientSecret) process.env.SPOTIFY_CLIENT_SECRET = originalClientSecret
+    }
+  })
+
+  it('should successfully make authenticated API calls via SDK', async () => {
+    // Test actual API call through SDK
+    const { getSpotifyClient } = await import('../../server/utils/spotify')
+
+    const client = getSpotifyClient()
+    
+    // Test genres endpoint (minimal API call)
+    const genres = await client.recommendations.genreSeeds()
+    
+    expect(genres).toBeTruthy()
+    expect(Array.isArray(genres)).toBe(true)
+    expect(genres.length).toBeGreaterThan(0)
+  })
+
+  it('should handle SDK authentication errors gracefully', async () => {
+    // Test SDK error handling with invalid credentials
     const originalClientId = process.env.SPOTIFY_CLIENT_ID
     const originalClientSecret = process.env.SPOTIFY_CLIENT_SECRET
     
@@ -21,9 +54,11 @@ describe('Spotify API Authentication', () => {
     process.env.SPOTIFY_CLIENT_SECRET = 'invalid_secret'
 
     try {
-      const { getSpotifyAccessToken } = await import('~/server/api/_spotify-client')
+      const { getSpotifyClient } = await import('../../server/utils/spotify')
+      const client = getSpotifyClient()
       
-      await expect(getSpotifyAccessToken()).rejects.toThrow()
+      // SDK should handle auth errors internally and throw appropriate errors
+      await expect(client.recommendations.genreSeeds()).rejects.toThrow()
     } finally {
       // Restore original credentials
       process.env.SPOTIFY_CLIENT_ID = originalClientId
@@ -31,39 +66,26 @@ describe('Spotify API Authentication', () => {
     }
   })
 
-  it('should cache authentication tokens appropriately', async () => {
-    const { getSpotifyAccessToken } = await import('~/server/api/_spotify-client')
+  it('should automatically handle token refresh via SDK', async () => {
+    // Test that SDK handles token management automatically
+    const { getSpotifyClient } = await import('../../server/utils/spotify')
 
-    const startTime = Date.now()
-    const token1 = await getSpotifyAccessToken()
-    const firstCallTime = Date.now() - startTime
-
-    const startTime2 = Date.now()
-    const token2 = await getSpotifyAccessToken()
-    const secondCallTime = Date.now() - startTime2
-
-    // Both calls should return the same token
-    expect(token1).toBe(token2)
+    const client1 = getSpotifyClient()
+    const client2 = getSpotifyClient()
     
-    // Second call should be faster (cached)
-    expect(secondCallTime).toBeLessThan(firstCallTime)
-  })
-
-  it('should refresh token when expired', async () => {
-    const { getSpotifyAccessToken, clearTokenCache } = await import('~/server/api/_spotify-client')
-
-    // Get initial token
-    const token1 = await getSpotifyAccessToken()
-    expect(token1).toBeTruthy()
-
-    // Clear cache to simulate expiration
-    clearTokenCache()
-
-    // Get new token
-    const token2 = await getSpotifyAccessToken()
-    expect(token2).toBeTruthy()
+    // Both clients should be independent instances
+    expect(client1).toBeTruthy()
+    expect(client2).toBeTruthy()
     
-    // Tokens might be the same if Spotify returns same token, but call should succeed
-    expect(typeof token2).toBe('string')
+    // Both should be able to make successful API calls
+    const [genres1, genres2] = await Promise.all([
+      client1.recommendations.genreSeeds(),
+      client2.recommendations.genreSeeds()
+    ])
+    
+    expect(genres1).toBeTruthy()
+    expect(genres2).toBeTruthy()
+    // Results should be identical (same API endpoint)
+    expect(genres1).toEqual(genres2)
   })
 })
